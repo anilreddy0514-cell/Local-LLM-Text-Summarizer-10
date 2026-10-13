@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f3f5ef">
+  <title>Local Text Summarizer</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #183a35;
+      --muted: #62716c;
+      --paper: #f3f5ef;
+      --surface: #fffefa;
+      --line: #dce3da;
+      --green: #176b54;
+      --green-dark: #10523f;
+      --lime: #d8ef91;
+      --coral: #b94d3d;
+      --shadow: 0 18px 50px rgb(24 58 53 / 8%);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      min-width: 320px;
+      min-height: 100vh;
+      margin: 0;
+      color: var(--ink);
+      background-color: var(--paper);
+      background-image: radial-gradient(#cbd8cc 0.7px, transparent 0.7px);
+      background-size: 19px 19px;
+      font-family: "Avenir Next", Avenir, "Segoe UI", sans-serif;
+    }
+
+    button, textarea { font: inherit; }
+    .shell { width: min(1120px, calc(100% - 48px)); margin: 0 auto; }
+    .topbar {
+      height: 76px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgb(24 58 53 / 13%);
+    }
+    .brand { display: flex; align-items: center; gap: 11px; font-size: 14px; font-weight: 750; }
+    .brand-mark {
+      width: 30px; height: 30px; display: grid; place-items: center;
+      color: var(--lime); background: var(--green); border-radius: 9px;
+    }
+    .local-badge {
+      display: inline-flex; align-items: center; gap: 8px; color: var(--muted);
+      font-size: 12px; font-weight: 650;
+    }
+    .local-badge::before {
+      width: 8px; height: 8px; content: ""; border-radius: 50%;
+      background: #58a47b; box-shadow: 0 0 0 3px rgb(88 164 123 / 15%);
+    }
+    main { padding: 65px 0 72px; }
+    .intro { max-width: 710px; margin-bottom: 35px; animation: rise-in 500ms ease-out both; }
+    .eyebrow {
+      margin: 0 0 15px; color: var(--green); font-size: 11px; font-weight: 800;
+      letter-spacing: 1.2px; text-transform: uppercase;
+    }
+    h1 {
+      max-width: 650px; margin: 0; font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(42px, 6vw, 68px); font-weight: 500; line-height: 1.02;
+    }
+    .intro p:last-child { max-width: 520px; margin: 18px 0 0; color: var(--muted); font-size: 16px; line-height: 1.6; }
+    .workspace {
+      display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 0.82fr);
+      min-height: 390px; overflow: hidden; background: var(--surface);
+      border: 1px solid var(--line); border-radius: 7px; box-shadow: var(--shadow);
+      animation: rise-in 600ms 80ms ease-out both;
+    }
+    .input-pane, .output-pane { min-width: 0; padding: 25px 27px; }
+    .input-pane { display: flex; flex-direction: column; border-right: 1px solid var(--line); }
+    .pane-heading { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
+    .pane-heading h2 { margin: 0; font-size: 13px; font-weight: 750; }
+    .counter { color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+    textarea {
+      flex: 1; width: 100%; min-height: 230px; resize: vertical; padding: 0;
+      color: var(--ink); background: transparent; border: 0; outline: 0;
+      font-size: 14px; line-height: 1.7;
+    }
+    textarea::placeholder { color: #9ba69e; }
+    .input-footer { display: flex; align-items: center; justify-content: space-between; gap: 15px; padding-top: 20px; }
+    .privacy-note { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 11px; }
+    .privacy-dot { width: 7px; height: 7px; border-radius: 50%; background: #58a47b; }
+    .summarize-button {
+      min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+      padding: 0 17px; color: white; background: var(--green); border: 0; border-radius: 5px;
+      cursor: pointer; font-size: 12px; font-weight: 750; transition: background 150ms, transform 150ms;
+    }
+    .summarize-button:hover:not(:disabled) { background: var(--green-dark); transform: translateY(-1px); }
+    .summarize-button:focus-visible, .copy-button:focus-visible, textarea:focus-visible { outline: 3px solid #a8cf69; outline-offset: 3px; }
+    .summarize-button:disabled { cursor: wait; opacity: .8; }
+    .spinner {
+      display: none; width: 14px; height: 14px; border: 2px solid rgb(255 255 255 / 40%);
+      border-top-color: white; border-radius: 50%; animation: spin 700ms linear infinite;
+    }
+    .summarize-button[aria-busy="true"] .spinner { display: inline-block; }
+    .summarize-button[aria-busy="true"] .sparkle { display: none; }
+    .output-pane { display: flex; flex-direction: column; background: #fbfcf8; }
+    .output-heading { display: flex; justify-content: space-between; align-items: center; }
+    .output-heading h2 { margin: 0; font-size: 13px; font-weight: 750; }
+    .copy-button {
+      width: 33px; height: 33px; display: grid; place-items: center; color: var(--muted);
+      background: transparent; border: 1px solid var(--line); border-radius: 5px; cursor: pointer;
+    }
+    .copy-button:disabled { cursor: default; opacity: .4; }
+    .result {
+      flex: 1; margin-top: 18px; color: var(--ink); font-family: Georgia, "Times New Roman", serif;
+      font-size: 19px; line-height: 1.65; overflow-wrap: anywhere; white-space: pre-wrap;
+    }
+    .result.empty { color: #849189; font-family: "Avenir Next", Avenir, sans-serif; font-size: 13px; line-height: 1.65; }
+    .error-message { display: none; margin: 15px 0 0; padding: 11px 12px; color: #8e352a; background: #fff0ec; border-left: 3px solid var(--coral); font-size: 12px; line-height: 1.5; }
+    .error-message.visible { display: block; }
+    .status { min-height: 18px; margin-top: 11px; color: var(--muted); font-size: 11px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes rise-in { from { opacity: 0; transform: translateY(9px); } to { opacity: 1; transform: translateY(0); } }
+
+    @media (max-width: 760px) {
+      .shell { width: min(100% - 30px, 560px); }
+      main { padding-top: 43px; }
+      .intro { margin-bottom: 27px; }
+      .workspace { grid-template-columns: 1fr; }
+      .input-pane { min-height: 330px; border-right: 0; border-bottom: 1px solid var(--line); }
+      .output-pane { min-height: 230px; }
+    }
+    @media (max-width: 430px) {
+      .topbar { height: 64px; }
+      .local-badge { font-size: 10px; }
+      .input-pane, .output-pane { padding: 21px 18px; }
+      .input-footer { align-items: flex-start; flex-direction: column; }
+      .summarize-button { width: 100%; }
+      h1 { font-size: 43px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <div class="brand"><span class="brand-mark" aria-hidden="true">S</span><span>Shortform</span></div>
+      <span class="local-badge">Private | runs on your machine</span>
+    </header>
+    <main>
+      <section class="intro" aria-labelledby="page-title">
+        <p class="eyebrow">Local language model</p>
+        <h1 id="page-title">Make the long story short.</h1>
+        <p>Turn a block of text into a clear, compact summary. Your words stay on this device.</p>
+      </section>
+      <section class="workspace" aria-label="Text summarizer">
+        <form class="input-pane" id="summarize-form">
+          <div class="pane-heading">
+            <h2><label for="source-text">Your text</label></h2>
+            <span class="counter" id="character-count">0 / 20,000</span>
+          </div>
+          <textarea id="source-text" name="text" maxlength="20000" placeholder="Paste an article, notes, or a passage here..." aria-describedby="character-count error-message"></textarea>
+          <div class="input-footer">
+            <span class="privacy-note" aria-label="Text is processed locally"><span class="privacy-dot" aria-hidden="true"></span>Processed locally</span>
+            <button class="summarize-button" id="summarize-button" type="submit">
+              <svg class="sparkle" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 1.9 5.8L20 11l-6.1 2.2L12 19l-1.9-5.8L4 11l6.1-2.2L12 3Z"/><path d="m19 14 1 2.5 2.5 1-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1 1-2.5Z"/></svg>
+              <span class="spinner" aria-hidden="true"></span>
+              <span class="button-label">Summarize</span>
+            </button>
+          </div>
+          <p class="error-message" id="error-message" role="alert"></p>
+        </form>
+        <section class="output-pane" aria-labelledby="summary-title">
+          <div class="output-heading">
+            <h2 id="summary-title">Summary</h2>
+            <button class="copy-button" id="copy-button" type="button" aria-label="Copy summary" title="Copy summary" disabled>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></svg>
+            </button>
+          </div>
+          <div class="result empty" id="summary-result" aria-live="polite">Your summary will appear here.</div>
+          <p class="status" id="status-message" role="status"></p>
+        </section>
+      </section>
+    </main>
+  </div>
+  <script>
+    const form = document.querySelector("#summarize-form");
+    const input = document.querySelector("#source-text");
+    const count = document.querySelector("#character-count");
+    const button = document.querySelector("#summarize-button");
+    const buttonLabel = document.querySelector(".button-label");
+    const result = document.querySelector("#summary-result");
+    const error = document.querySelector("#error-message");
+    const status = document.querySelector("#status-message");
+    const copyButton = document.querySelector("#copy-button");
+
+    input.addEventListener("input", () => {
+      count.textContent = `${input.value.length.toLocaleString()} / 20,000`;
+      error.classList.remove("visible");
+    });
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const text = input.value.trim();
+      error.classList.remove("visible");
+      status.textContent = "";
+
+      if (!text) {
+        showError("Enter some text before requesting a summary.");
+        input.focus();
+        return;
+      }
+
+      setLoading(true);
+      result.classList.add("empty");
+      result.textContent = "Reading and condensing your text...";
+      copyButton.disabled = true;
+      try {
+        const response = await fetch("/api/summarize", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text })
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          const detail = typeof data.detail === "string" ? data.detail : "The summary could not be generated. Please try again.";
+          throw new Error(detail);
+        }
+        result.classList.remove("empty");
+        result.textContent = data.summary;
+        copyButton.disabled = false;
+        status.textContent = "Summary ready";
+      } catch (requestError) {
+        result.classList.add("empty");
+        result.textContent = "Your summary will appear here.";
+        showError(requestError instanceof TypeError
+          ? "Could not reach the app server. Check your connection and try again."
+          : requestError.message || "Something went wrong. Please try again.");
+      } finally {
+        setLoading(false);
+      }
+    });
+
+    copyButton.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(result.textContent);
+        status.textContent = "Copied to clipboard";
+      } catch {
+        status.textContent = "Clipboard access is unavailable in this browser";
+      }
+    });
+
+    function showError(message) {
+      error.textContent = message;
+      error.classList.add("visible");
+    }
+
+    function setLoading(loading) {
+      button.disabled = loading;
+      button.setAttribute("aria-busy", String(loading));
+      buttonLabel.textContent = loading ? "Summarizing..." : "Summarize";
+    }
+  </script>
+</body>
+</html>

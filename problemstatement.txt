@@ -1,0 +1,9 @@
+Assignment 10: Local LLM Text Summarizer
+Question: Build a text summarization application using FastAPI and TinyLlama running locally through Ollama.
+Requirements
+
+- Create and configure a Conda environment for the project.
+- Install Ollama and pull the TinyLlama model.
+- Develop a FastAPI endpoint that accepts text and generates a concise summary.
+- Create a user-friendly HTML interface and connect it to the backend.
+- Implement input validation, loading status, exception handling, and clear error messages.
